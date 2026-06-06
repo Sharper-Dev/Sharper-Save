@@ -25,4 +25,4 @@ The bytes shuffling makes difficult the view and reorganization of the original 
 If we convert the shuffled bytes to text, we will have this result:
 > a"6st0.atait:}taaourNa40n4i"Da5:D{"tat83oeo20bl0"a71te0:"Dm7"n2la0"1:trf,D9"1"g",4,
 
-More details of how it works you can see this repository [Wiki](https://github.com/DisassembledSharper/Sharper-Save/wiki).
+More details of how it works you can see this repository [Wiki](https://github.com/Sharper-Dev/Sharper-Save/wiki).
