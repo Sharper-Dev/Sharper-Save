@@ -23,4 +23,4 @@ O embaralhamento dos bytes dificulta a visualização e a reorganização dos da
  Se convertermos os bytes embaralhados para texto, obtemos o seguinte resultado:
 > a"6st0.atait:}taaourNa40n4i"Da5:D{"tat83oeo20bl0"a71te0:"Dm7"n2la0"1:trf,D9"1"g",4,
 
-Mais detalhes de como funciona se encontra na [Wiki](https://github.com/DisassembledSharper/Sharper-Save/wiki) desse repositório.
+Mais detalhes de como funciona se encontra na [Wiki](https://github.com/Sharper-Dev/Sharper-Save/wiki) desse repositório.
