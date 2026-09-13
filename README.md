@@ -1,4 +1,4 @@
-# Sharper Save
+# SH-Save
 
 A simple local save system with hiding data and integrity check features.
 

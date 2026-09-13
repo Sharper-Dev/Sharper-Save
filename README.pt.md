@@ -1,4 +1,4 @@
-# Sharper Save
+# SH-Save
 
  Um simples sistema de salvamento local com os recursos de ofuscação dos dados e verificação de integridade.
 
