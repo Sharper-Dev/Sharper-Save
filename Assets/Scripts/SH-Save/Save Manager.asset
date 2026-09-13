@@ -21,5 +21,4 @@ MonoBehaviour:
   _protectSave: 1
   _shuffleSeed: 1
   _hashSalt: salt423
-  _useMongoDB: 1
   _saveContainer: {fileID: 11400000, guid: f17343dfd1856234a8b5535ed82d84ba, type: 2}

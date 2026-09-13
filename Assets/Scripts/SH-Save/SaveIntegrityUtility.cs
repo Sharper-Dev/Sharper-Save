@@ -3,7 +3,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SharperSave
+namespace SHSave
 {
     /// <summary>
     /// This class contains methods to check integrity and hide data.
@@ -62,19 +62,12 @@ namespace SharperSave
             {
                 hashBytes = hasher.ComputeHash(Encoding.UTF8.GetBytes(salt + content));
 
-                result = BytesToHexadecimal(hashBytes);
+                for (int i = 0; i < hashBytes.Length; i++)
+                {
+                    result += hashBytes[i].ToString("x2");
+                }
             }
-            return result;
-        }
 
-        private static string BytesToHexadecimal(byte[] bytesToConvert)
-        {
-            string result = "";
-
-            for (int i = 0; i < bytesToConvert.Length; i++)
-            {
-                result += bytesToConvert[i].ToString("x2");
-            }
             return result;
         }
         /// <summary>

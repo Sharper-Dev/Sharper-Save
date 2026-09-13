@@ -1,4 +1,3 @@
-using SharperSave.DataClasses;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,12 +5,12 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace SharperSave
+namespace SHSave
 {
     /// <summary>
     /// The Save Manager containing methods to load and save data.
     /// </summary>
-    [CreateAssetMenu(fileName ="Save Manager", menuName = "Sharper Save/Save Manager")]
+    [CreateAssetMenu(fileName ="Save Manager", menuName = "SH-Save/Save Manager")]
     public class SaveManager : ScriptableObject
     {
         [Header("Setup")]
@@ -46,10 +45,7 @@ namespace SharperSave
 
         [Tooltip("A salt to be used in the hash generator, making difficult to inject a new hash.")]
         [SerializeField] private string _hashSalt = "salt423";
-
-        [SerializeField] private bool _useMongoDB;
         [Space(2)]
-        
 
         [Header("References")]
         [Tooltip("The container to get and set data.")]
@@ -120,6 +116,7 @@ namespace SharperSave
             try
             {
                 OnStartSave?.Invoke();
+
                 if (_saveFileName == "")
                 {
                     throw new Exception("Empty save file name");
@@ -131,54 +128,43 @@ namespace SharperSave
                 }
 
                 string saveContent = JsonUtility.ToJson(_saveContainer.saveData);
+                FileStream fileStream = new(GetSavePath(), FileMode.Create);
 
-                if (_useMongoDB)
+                if (_protectSave)
                 {
-                    RealmManager.Instance.SaveData(saveContent);
+                    using (StreamWriter streamWriter = new(GetHashPath()))
+                    {
+                        streamWriter.Write(SaveIntegrityUtility.GetStringHash(saveContent, _hashSalt));
+                    }
+
+                    List<byte> shuffledBytes = SaveIntegrityUtility.ShuffleBytes(Encoding.UTF8.GetBytes(saveContent).ToList(), _shuffleSeed);
+
+                    saveContent = "";
+
+                    for (int i = 0; i < shuffledBytes.Count; i++)
+                    {
+                        saveContent += shuffledBytes[i].ToString();
+
+                        if (i < shuffledBytes.Count - 1)
+                        {
+                            saveContent += " ";
+                        }
+                    }
+
+                    using (BinaryWriter binaryWriter = new(fileStream))
+                    {
+                        binaryWriter.Write(saveContent);
+                    }
                 }
                 else
                 {
-                    FileStream fileStream = new(GetSavePath(), FileMode.Create);
-
-                    if (_protectSave)
+                    using (StreamWriter streamWriter = new(fileStream))
                     {
-                        string saveHash = SaveIntegrityUtility.GetStringHash(saveContent, _hashSalt);
-                        using (StreamWriter streamWriter = new(GetHashPath()))
-                        {
-                            streamWriter.Write(saveHash);
-                        }
-
-                        List<byte> shuffledBytes = SaveIntegrityUtility.ShuffleBytes(Encoding.UTF8.GetBytes(saveContent).ToList(), _shuffleSeed);
-
-                        saveContent = "";
-
-                        for (int i = 0; i < shuffledBytes.Count; i++)
-                        {
-                            saveContent += shuffledBytes[i].ToString();
-
-                            if (i < shuffledBytes.Count - 1)
-                            {
-                                saveContent += " ";
-                            }
-                        }
-
-                        using (BinaryWriter binaryWriter = new(fileStream))
-                        {
-                            binaryWriter.Write(saveContent);
-                        }
-                        
+                        streamWriter.Write(saveContent);
                     }
-                    else
-                    {
-                        using (StreamWriter streamWriter = new(fileStream))
-                        {
-                            streamWriter.Write(saveContent);
-                        }
-                    }
-
-                    fileStream.Close();
                 }
-                
+             
+                fileStream.Close();
                 OnSaveSuccess?.Invoke();
             }
             catch (Exception e)
@@ -198,70 +184,60 @@ namespace SharperSave
             {
                 OnStartLoad?.Invoke();
                 string content = "";
+                if (_protectSave)
+                {
+                    byte[] contentInBytes;
+                    string previousHash = "";
+                    string currentHash;
 
-                if (_useMongoDB)
-                {
-                    content = RealmManager.Instance.GetData();
-                }
-                else
-                {
-                    if (_protectSave)
+                    using (FileStream fileStream = new(GetSavePath(), FileMode.Open))
                     {
-                        byte[] contentInBytes;
-                        string previousHash = "";
-                        string currentHash;
-
-                        using (FileStream fileStream = new(GetSavePath(), FileMode.Open))
+                        using (BinaryReader binaryReader = new(fileStream))
                         {
-                            using (BinaryReader binaryReader = new(fileStream))
+                            var bytesList = new List<byte>();
+
+                            content = binaryReader.ReadString();
+
+                            foreach (string stringByte in content.Split(' '))
                             {
-                                var bytesList = new List<byte>();
-
-                                content = binaryReader.ReadString();
-
-                                foreach (string stringByte in content.Split(' '))
-                                {
-                                    bytesList.Add(Convert.ToByte(stringByte));
-                                }
-
-                                contentInBytes = SaveIntegrityUtility.UnshuffleBytes(bytesList, _shuffleSeed).ToArray();
+                                bytesList.Add(Convert.ToByte(stringByte));
                             }
-                        }
 
-                        content = Encoding.UTF8.GetString(contentInBytes);
-                        //Debug.Log("Binary reading ok");
+                            contentInBytes = SaveIntegrityUtility.UnshuffleBytes(bytesList, _shuffleSeed).ToArray();
+                        }
+                    }
 
-                        currentHash = SaveIntegrityUtility.GetStringHash(content, _hashSalt);
+                    content = Encoding.UTF8.GetString(contentInBytes);
+                    //Debug.Log("Binary reading ok");
 
-                        using (StreamReader reader = new(GetHashPath()))
-                        {
-                            previousHash = reader.ReadToEnd();
-                        }
-                        Debug.Log(RealmManager.Instance.GetData());
-                        if (previousHash == currentHash)
-                        {
-                            //Debug.Log("Hash pass");
-                        }
-                        else if (previousHash == "")
-                        {
-                            throw new Exception("Hash not found");
-                        }
-                        else
-                        {
-                            throw new Exception("Hash check fail");
-                        }
+                    currentHash = SaveIntegrityUtility.GetStringHash(content, _hashSalt);
+
+                    using (StreamReader reader = new (GetHashPath()))
+                    {
+                        previousHash = reader.ReadToEnd();
+                    }
+
+                    if (previousHash == currentHash)
+                    {
+                        //Debug.Log("Hash pass");
+                    }
+                    else if (previousHash == "")
+                    {
+                        throw new Exception("Hash not found");
                     }
                     else
                     {
-                        using (StreamReader reader = new(GetSavePath()))
-                        {
-                            content = reader.ReadToEnd();
-                        }
+                        throw new Exception("Hash check fail");
                     }
-
-                    _saveContainer.saveData = JsonUtility.FromJson<SaveData>(content);
                 }
-                
+                else
+                {
+                    using (StreamReader reader = new (GetSavePath()))
+                    {
+                        content = reader.ReadToEnd();
+                    }
+                }
+                _saveContainer.saveData = JsonUtility.FromJson<SaveData>(content);
                 wasLoaded = true;
                 OnLoadSuccess?.Invoke();
             }
